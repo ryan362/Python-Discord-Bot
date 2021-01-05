@@ -4,8 +4,6 @@ import os
 import asyncio
 # import requests, json
 client = discord.Client()
-serverid = 426488629788016640
-logsid = 795753613396803635
 
 
 @client.event
@@ -19,19 +17,16 @@ async def on_message(message):
 			return
 		if message.channel.id == 795638996381990972:
 			if message.content.startswith("Name:"):
-				applicationcheck(message)
+				await applicationcheck(message)
 		elif message.content.startswith("r!"):
 			if message.content.startswith("r!ban"):
-				ban(message)
+				await ban(message)
 			elif message.content.startswith("r!kick"):
-				kick(message)
+				await kick(message)
 			else: 
 				await message.channel.send("`Invalid command run r!help to view the valid commands`")
-				return
-		else:
-			return
 
-def applicationcheck(message):
+async def applicationcheck(message):
 	await message.add_reaction("✅")
 	await message.add_reaction("❌")
 	if "Revelation Council" in str(message.role_mentions):
@@ -40,7 +35,7 @@ def applicationcheck(message):
 		revc = message.guild.get_role(795652505613631499)
 		await message.channel.send(revc.mention +" somebody screwed up their application and forgot to ping")
 
-def kick(message):
+async def kick(message):
 	if len(message.mentions) == 1:
 		params = str.split(message.content)
 		usr = message.mentions[0]
@@ -51,7 +46,7 @@ def kick(message):
 			await message.guild.kick(usr, params[2:])
 			await message.channel.send("`"+ usr.name + "has been successfully kicked" + "`")
 
-def ban(message):
+async def ban(message):
 	if len(message.mentions) == 1:
 		params = str.split(message.content)
 		print("Count: " + str(len(params)))
