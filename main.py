@@ -1,5 +1,6 @@
 import discord
 import os
+from replit import db
 # import datetime
 import asyncio
 # import requests, json
@@ -19,7 +20,9 @@ async def on_message(message):
 			if message.content.startswith("Name:"):
 				await applicationcheck(message)
 		elif message.content.startswith("r!"):
-			if message.content.startswith("r!ban"):
+			if message.content.startswith("r!help"):
+				await  helpcmd(message)
+			elif message.content.startswith("r!ban"):
 				await ban(message)
 			elif message.content.startswith("r!kick"):
 				await kick(message)
@@ -34,6 +37,12 @@ async def applicationcheck(message):
 	else:
 		revc = message.guild.get_role(795652505613631499)
 		await message.channel.send(revc.mention +" somebody screwed up their application and forgot to ping")
+
+async def helpcmd(message):
+	await message.channel.send("""```r!help - shows this menu
+r!ban - bans the user mentioned  [@user, 0-7 days of msgs to del, reason]
+r!kick - kicks the mentioned user [@user, reason]
+```""")
 
 async def kick(message):
 	if len(message.mentions) == 1:
@@ -62,8 +71,8 @@ async def ban(message):
 			await message.guild.ban(usr, reason="No reason was input - "+ message.author.name, delete_message_days=0)
 			await message.channel.send("`"+ usr.name + " has been banned successfully" + "`")
 	else:
-		await message.channel.send("""Improper use of ban command
-		`r!ban @user, 0-7 amount of days to delete messages from, reason for ban""")
+		await message.channel.send("""Improper use of ban command	
+		`r!ban @user, 0-7 amount of days to delete messages from, reason for ban`""")
 
 @client.event
 async def on_member_join(user):
