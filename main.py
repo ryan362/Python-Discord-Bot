@@ -2,12 +2,6 @@ import discord
 from discord.ext import commands
 import os
 from replit import db
-MsgMute 
-TotalMute
-VCMute
-hasMsgMute = False
-hasTotalMute = False
-hasVCMute = False
 
 bot = commands.Bot(command_prefix="r!")
 test = 426488629788016640
@@ -88,17 +82,34 @@ async def ban(ctx):
 `r!ban @user, 0-7 amount of days to delete messages from, reason for ban`""")
 
 @bot.command()
-async def mute(ctx, user, time, *reason):
-	print("a")
+async def mute(ctx, user, timelimit, *reason):
+	if db["muteroles-" + str(ctx.guild.id)]:
+		if checkperms(ctx, "mute_members"):
+			if len(ctx.message.mentions) == 1:
+				usr = ctx.message.mentions[0]
+				member = ctx.guild.get_member_named(usr.name + "#" + str(user.descriminator))
+				vcmuteid = db["vcmuteid-" + ctx.guild.id]
+				totalmuteid = db["totalmuteid-" + ctx.guild.id]
+				msgmuteid = db["msgmuteid-" + ctx.guild.id]
+	else:
+		ctx.send("`Mute roles haven't been setup. Mute Roles are being setup please re-run this command in a bit.`")
+		checkmute(ctx.guild)
 
-@bot.event
-async def on_guild_join(guild):
-	checkmute(guild)
+async def addmute (ctx, mutetype):
+	if db["muteroles-" + str(ctx.guild.id)]:
+		if checkperms(ctx, "mute_members"):
+			if len(ctx.message.mentions) == 1:
+				usr = ctx.message.mentions[0]
+				member = ctx.guild.get_member_named(usr.name + "#" + str(usr.descriminator))
+				muteid = db[mutetype + "muteid-" + ctx.guild.id]
+				role = ctx.guild.get_role(muteid)
+				await member.add_roles(role)
+	else:
+		ctx.send("`Mute roles haven't been setup. Mute Roles are being setup please re-run this command in a bit.`")
+		checkmute(ctx.guild)
 
 async def checkmute(guild):
-	global hasMsgMute
-	global hasTotalMute
-	global hasVCMute
+	botRole = None
 	hasMsgMute = False
 	hasTotalMute = False
 	hasVCMute = False
@@ -136,6 +147,9 @@ async def checkmute(guild):
 			global VCMute
 			hasVCMute = True
 			VCMute = guild.get_role(x.id)
+		elif x.name == str(bot.user.name):
+			print("found bot")
+			botRole = guild.get_role(x.id)
 		else:
 			count += 1
 			if count == len(roles):
@@ -143,20 +157,26 @@ async def checkmute(guild):
 			else:
 				continue
 	if hasMsgMute == False:
-		global MsgMute
+		print("no msg mute")
 		MsgMute = await guild.create_role(name="Message Mute", permissions=MsgPerms, colour=discord.Colour.light_grey(), hoist=False, mentionable=False, reason="For mute command")
 	if hasTotalMute == False:
-		global TotalMute
 		TotalMute = await guild.create_role(name="Total Mute", permissions=TotalPerms, colour=discord.Colour.light_grey(), hoist=False, mentionable=False, reason="For mute command")
 	if hasVCMute == False:
-		global VCMute
 		VCMute = await guild.create_role(name="VC Mute", permissions=VCPerms, colour=discord.Colour.light_grey(), hoist=False, mentionable=False, reason="For mute command")
+	print(botRole.position)
 	positions = {
-		MsgMute: 2,
-		TotalMute: 1,
-		VCMute: 3
+		TotalMute: (botRole.position),		
+		MsgMute: (TotalMute.position),
+		VCMute: (MsgMute.position)
 	}
 	await guild.edit_role_positions(positions=positions)
-	db["muteroles-" + guild.id] = True
+	db["muteroles-" + str(guild.id)] = True
+	db["totalmuteid-" + str(guild.id)] = TotalMute.id
+	db["msgmuteid-" + str(guild.id)] = MsgMute.id
+	db["vcmuteid-" + str(guild.id)] = VCMute.id
+
+@bot.event
+async def on_guild_join(guild):
+	checkmute(guild)
 
 bot.run(os.getenv("token"))
