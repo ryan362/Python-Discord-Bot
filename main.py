@@ -9,8 +9,6 @@ test = 426488629788016640
 @bot.event
 async def on_ready():
 	print("Logged in as {0.user}".format(bot))
-	guild = bot.get_guild(test)
-	await checkmute(guild)
 
 @bot.event
 async def on_message(message):
@@ -32,27 +30,27 @@ async def applicationcheck(message):
 		await message.channel.send(revc.mention +" somebody screwed up their application and forgot to ping")
 
 
-def checkperms(ctx, perm):
+async def checkperms(ctx, perm):
 	usr = ctx.author
 	perms = usr.guild_permissions
 	if getattr(perms, perm) == True:
 		return True
 	else:
-		ctx.send("`You don't have permission to run this command. Missing the " + perm + " permission`")
+		await ctx.send("`You don't have permission to run this command. Missing the " + perm + " permission`")
 		return False
 
 @bot.command()
 async def kick(ctx):
 	message = ctx.message
-	if checkperms(ctx, "kick_members"):
+	if await checkperms(ctx, "kick_members"):
 		if len(message.mentions) == 1:
 			params = str.split(message.content)
 			usr = message.mentions[0]
 			if len(params) == 1:
-				await message.guild.kick(usr, "Reason was not specified - " + message.author.name)
+				await message.guild.kick(usr, reason=("Reason was not specified - " + message.author.name))
 				await message.channel.send("`"+ usr.name + "has been successfully kicked" + "`")
 			elif len(params) >= 2:
-				await message.guild.kick(usr, params[2:])
+				await message.guild.kick(usr, reason=(params[2:]))
 				await message.channel.send("`"+ usr.name + "has been successfully kicked" + "`")
 			else:
 				await message.channel.send("`Invalid parameters of kick [@user, reason] refer to r!help")
@@ -61,7 +59,7 @@ async def kick(ctx):
 
 @bot.command()
 async def ban(ctx):
-	if checkperms(ctx, "ban_members"):
+	if await checkperms(ctx, "ban_members"):
 		message = ctx.message
 		if len(message.mentions) == 1:
 			params = str.split(message.content)
@@ -69,7 +67,7 @@ async def ban(ctx):
 			usr = message.mentions[0]
 			if len(params) == 2:
 				if str.isnumeric(params[2]):
-					await message.guild.ban(usr, "No reason was input - " + message.author.name, delete_message_days=int(params[2]))
+					await message.guild.ban(usr, reason=("No reason was input - " + message.author.name), delete_message_days=int(params[2]))
 					await message.channel.send("`"+ usr.name + " has been banned successfully" + "`")
 			elif len(params) >= 3:
 					await message.guild.ban(usr, reason=str(params[3:]) + " - " + message.author.name, delete_message_days=str(params[2]))
@@ -82,31 +80,37 @@ async def ban(ctx):
 `r!ban @user, 0-7 amount of days to delete messages from, reason for ban`""")
 
 @bot.command()
-async def mute(ctx, user, timelimit, *reason):
-	if db["muteroles-" + str(ctx.guild.id)]:
-		if checkperms(ctx, "mute_members"):
-			if len(ctx.message.mentions) == 1:
-				usr = ctx.message.mentions[0]
-				member = ctx.guild.get_member_named(usr.name + "#" + str(user.descriminator))
-				vcmuteid = db["vcmuteid-" + ctx.guild.id]
-				totalmuteid = db["totalmuteid-" + ctx.guild.id]
-				msgmuteid = db["msgmuteid-" + ctx.guild.id]
-	else:
-		ctx.send("`Mute roles haven't been setup. Mute Roles are being setup please re-run this command in a bit.`")
-		checkmute(ctx.guild)
+async def mute(ctx, *args):
+	await addmute(ctx, "msg", args)
+	
+@bot.command()
+async def msgmute(ctx, *args):
+	await addmute(ctx, "msg", args)
 
-async def addmute (ctx, mutetype):
-	if db["muteroles-" + str(ctx.guild.id)]:
-		if checkperms(ctx, "mute_members"):
+@bot.command()
+async def totalmute(ctx, *args):
+	await addmute(ctx, "total", args)
+
+@bot.command()
+async def vcmute(ctx, *args):
+	await addmute(ctx, "vc", args)
+
+async def addmute (ctx, mutetype, args):
+	try:
+		db["muteroles-" + str(ctx.guild.id)]
+		if await checkperms(ctx, "mute_members"):
 			if len(ctx.message.mentions) == 1:
 				usr = ctx.message.mentions[0]
-				member = ctx.guild.get_member_named(usr.name + "#" + str(usr.descriminator))
-				muteid = db[mutetype + "muteid-" + ctx.guild.id]
+				member1 = ctx.guild.get_member_named(usr.name)
+				muteid = int(db[mutetype + "muteid-" + str(ctx.guild.id)])
 				role = ctx.guild.get_role(muteid)
-				await member.add_roles(role)
-	else:
-		ctx.send("`Mute roles haven't been setup. Mute Roles are being setup please re-run this command in a bit.`")
-		checkmute(ctx.guild)
+				if len(args) >= 2:
+					await member1.add_roles(role, reason=(args[2:] + " - " + ctx.message.author))
+				else:
+					await member1.add_roles(role, reason=("No reason given, Moderator: " + ctx.message.author))
+	except KeyError:
+		await ctx.send("`Mute roles haven't been setup. Mute Roles are being setup please re-run this command in a bit.`")
+		await checkmute(ctx.guild)
 
 async def checkmute(guild):
 	botRole = None
@@ -147,7 +151,7 @@ async def checkmute(guild):
 			global VCMute
 			hasVCMute = True
 			VCMute = guild.get_role(x.id)
-		elif x.name == str(bot.user.name):
+		elif x.name == "Ryxn's Moderation":
 			print("found bot")
 			botRole = guild.get_role(x.id)
 		else:
@@ -177,6 +181,6 @@ async def checkmute(guild):
 
 @bot.event
 async def on_guild_join(guild):
-	checkmute(guild)
+	await checkmute(guild)
 
 bot.run(os.getenv("token"))

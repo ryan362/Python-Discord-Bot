@@ -8,6 +8,7 @@ authors = ["Your Name <you@example.com>"]
 python = "^3.8"
 "discord.py" = "^1.5.1"
 replit = "^2.0.0"
+youtube-dl = "^2021.1.16"
 
 [tool.poetry.dev-dependencies]
 
